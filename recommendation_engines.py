@@ -25,24 +25,6 @@ categories = []
 sub_ = []
 sub_sub_ =  []
 
-cur.execute("SELECT * FROM PRODUCT")
-products = cur.fetchall()
-
-for product in products:
-	if product[category] not in categories:
-		categories.append(product[category])
-
-for product in products:
-	if product[sub] not in sub_:
-		sub_.append(product[sub])
-
-for product in products:
-	if product[sub_sub] not in sub_sub_:
-		sub_sub_.append(product[sub_sub])		
-
-duplicates_1 = [a for a in categories if a in sub_]
-duplicates_2 = [a for a in sub_ if a in sub_sub_]
-
 
 
 def column_finder(productid):
@@ -100,6 +82,24 @@ def recommendation_filter(productid):
 	cur.execute("SELECT * FROM product WHERE _id = %s",[productID])
 	initial_product = cur.fetchone()
 
+	cur.execute("SELECT * FROM PRODUCT")
+	products = cur.fetchall()
+
+	for product in products:
+		if product[category] not in categories:
+			categories.append(product[category])
+
+	for product in products:
+		if product[sub] not in sub_:
+			sub_.append(product[sub])
+
+	for product in products:
+		if product[sub_sub] not in sub_sub_:
+			sub_sub_.append(product[sub_sub])		
+
+	duplicates_1 = [a for a in categories if a in sub_]
+	duplicates_2 = [a for a in sub_ if a in sub_sub_]
+
 	# loop until there are at least 4 similar products are found
 	while True:
 		count = 0 # keeps track of amount of similar products
@@ -107,6 +107,8 @@ def recommendation_filter(productid):
 
 		cur.execute(sql_query, columns)
 		filtered_products = cur.fetchall()
+
+		print(columns)
 
 		for product in filtered_products:
 			count += 1 
@@ -165,11 +167,11 @@ def recommended_products(productid):
 
 
 
-def create_table():
+def create_content_table():
 	'''
 	
 	'''
-	sql_create_table = "CREATE TABLE IF NOT EXISTS product_recommendations \
+	sql_create_table = "CREATE TABLE IF NOT EXISTS content_recommendations \
 					(main_product VARCHAR (40) PRIMARY KEY, \
 						similar_product_1 VARCHAR (40) NOT NULL, \
 						similar_product_2 VARCHAR (40) NOT NULL, \
@@ -181,11 +183,11 @@ def create_table():
 
 
 
-def recommendation_filler():
+def content_recommendation_filler():
 	'''
 	
 	'''
-	sql_insert = "INSERT INTO product_recommendations \
+	sql_insert = "INSERT INTO content_recommendations \
 				(main_product, similar_product_1, similar_product_2, similar_product_3, similar_product_4) \
 				VALUES (%s, %s, %s, %s, %s)"
 	cur.execute("SELECT * FROM product")
@@ -193,7 +195,6 @@ def recommendation_filler():
 	insertcount = 0
 	cur.execute("select count(*) from product")  
 	product_amount = list(cur)
-	# print(products[40328])
 	try:
 		for product in products:
 			cur.execute(sql_insert,recommended_products(product[0]))
@@ -205,11 +206,11 @@ def recommendation_filler():
 	
  
 def main():
-	create_table()
-	recommendation_filler()
+	create_content_table()
+	content_recommendation_filler()
 
 
-main()
+recommendation_filter(2554)
 
 
 
