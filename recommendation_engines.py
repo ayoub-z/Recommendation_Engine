@@ -64,11 +64,13 @@ def column_finder(productid):
 
 
 def recommendation_filter(productid):
-	'''Function uses all useful filters to find similar products to the current product.
-	   If less than 4 similar products are found, one filter is removed and the step is repeated.
-	   This repeats until at least 4 similar products are found.
-	   Filters are in order of importance (most important first, least import last).
-	   Importance is decided by the amount of products each filter has.'''
+	'''
+	Function uses all useful filters to find similar products to the current product.
+	If less than 4 similar products are found, one filter is removed and the step is repeated.
+	This repeats until at least 4 similar products are found.
+	Filters are in order of importance (most important first, least import last).
+	Importance is decided by the amount of products each filter has.
+	'''
 	   
 	productID = str(productid)
 
@@ -148,7 +150,6 @@ def recommendation_filter(productid):
 		for product in filtered_products:
 			count += 1
 		if count >= 4:
-			# print(f'Recommenadble products after filtering: {count}')
 			return(filtered_products)
 
 
@@ -167,18 +168,29 @@ def recommended_products(productid):
 
 
 
-def create_content_table():
+def create_sql_tables():
 	'''
 	
 	'''
-	sql_create_table = "CREATE TABLE IF NOT EXISTS content_recommendations \
-					(main_product VARCHAR (40) PRIMARY KEY, \
+	# creates table for content_filtering in the database if it doesn't already exist
+	sql_content_table = "CREATE TABLE IF NOT EXISTS content_recommendations \
+						(main_product VARCHAR (40) PRIMARY KEY, \
 						similar_product_1 VARCHAR (40) NOT NULL, \
 						similar_product_2 VARCHAR (40) NOT NULL, \
 						similar_product_3 VARCHAR (40) NOT NULL, \
 						similar_product_4 VARCHAR (40) NOT NULL);"
 
-	cur.execute(sql_create_table)
+	# creates table for collaborative_filtering in the database if it doesn't already exist 
+	sql_collaborative_table = "CREATE TABLE IF NOT EXISTS collaborative_recommendations \
+								(profile_id VARCHAR (40) PRIMARY KEY, \
+								similar_product_1 VARCHAR (40) NOT NULL, \
+								similar_product_2 VARCHAR (40) NOT NULL, \
+								similar_product_3 VARCHAR (40) NOT NULL, \
+								similar_product_4 VARCHAR (40) NOT NULL);"
+
+	cur.execute(sql_content_table)
+	con.commit()
+	cur.execute(sql_collaborative_table)
 	con.commit()
 
 
@@ -203,14 +215,82 @@ def content_recommendation_filler():
 			print(f"{insertcount} out of {product_amount[0][0]}")
 	except Exception as e:
 		print("Error! ",e, product[0])
+
+
+
+def profile_viewed_before(profile_id):
+	'''
+
+	'''
+	profile_ID = str(profile_id)
+		
+	cur.execute("SELECT product_id FROM viewed_before WHERE profile_id = %s", (profile_ID,))
+	viewed_products = cur.fetchall()
 	
- 
+	viewed_before = []
+	for r in viewed_products:
+		viewed_before.append(r[0])
+	viewed_before = tuple(viewed_before)
+
+	cur.execute("SELECT profile_id FROM viewed_before WHERE product_id IN %s", (viewed_before,))
+	similar_profiles = cur.fetchall()
+
+	similar_product_dict = {}
+
+	for profile in similar_profiles[]:
+		cur.execute("SELECT product_id FROM viewed_before WHERE profile_id IN (%s)", profile)
+		products = cur.fetchall()
+		for product in products:
+			if product[0] in similar_product_dict and product[0] not in viewed_before:
+				similar_product_dict[product[0]] += 1
+			elif product[0] not in similar_product_dict and product[0] not in viewed_before:
+				similar_product_dict[product[0]] = 1
+			else:
+				continue
+	# sorts dictionary from highest to lowest and returns the top 4 products
+	similar_product_results = sorted(similar_product_dict.items(), key=lambda x: x[1], reverse=True)[:4]
+
+	similar_products = []
+
+	for product in similar_product_results:
+		similar_products.append(product[0])
+
+	return(similar_products)
+
+
+
+def collaborative_recommendation_filler():
+	'''
+	
+	'''
+	sql_insert = "INSERT INTO product_recommendations \
+				(profile_id, similar_product_1, similar_product_2, similar_product_3, similar_product_4) \
+				VALUES (%s, %s, %s, %s, %s)"
+	cur.execute("SELECT * FROM profile")
+	profiles = cur.fetchall()
+	insertcount = 0
+	cur.execute("select count(*) from profile")  
+	profile_amount = list(cur)
+	# print(products[40328])
+	try:
+		for profile in profiles:
+			cur.execute(sql_insert,profile_viewed_before(profile[0]))
+			con.commit()
+			insertcount += 1
+			print(f"{insertcount} out of {profile_amount[0][0]}")
+	except Exception as e:
+		print("Error! ",e, profile[0])
+
+
+
 def main():
-	create_content_table()
-	content_recommendation_filler()
+	create_sql_tables()
+	content_recommendation_filler()	
+	collaborative_recommendation_filler()	
 
 
-recommendation_filter(2554)
+
+
 
 
 
