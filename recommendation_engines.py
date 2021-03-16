@@ -7,7 +7,7 @@ con = psycopg2.connect('host=localhost dbname=huwebshop user=postgres password=1
 #cursor
 cur = con.cursor()
 
-# all the columns in table product
+# all the columns in the table product. Easier to remember names than their position in a string
 _id = 0
 name = 1
 brand = 2
@@ -21,28 +21,27 @@ sub = 9
 sub_sub = 10
 sub_sub_sub = 11
 
-categories = []
-sub_ = []
-sub_sub_ =  []
-
 
 
 def column_finder(productid):
 	'''
-	
+	This function looks up the given product_id in the database to find rows that aren't empty. 
+	Afterwhich it returns a variable and an sql query containing only those rows that are 
+	left over after filtering.
+
 	'''
-	productID = str(productid)
+	productID = str(productid) # makes sure the product_id is in a string
 
-	cur.execute("SELECT * FROM product WHERE _id = %s",(productID,))
-	initial_product = cur.fetchone()
+	cur.execute("SELECT * FROM product WHERE _id = %s",(productID,)) # retrieves all data from given product_id
+	initial_product = cur.fetchone() # inputs product_id data in variable
 
-	sql_query = "SELECT * FROM product WHERE "
-	columns = []	
+	sql_query = "SELECT * FROM product WHERE " # sql query with a basic frame to look up products, will have more code added to it
+	columns = [] # variable that will contain the data of each row. We will need this later for comparing
 	
-	if initial_product[doelgroep] != None:
-		sql_query += ("doelgroep = %s AND ")
-		columns.append(initial_product[doelgroep])
-	if initial_product[category] != None:
+	if initial_product[doelgroep] != None: # checks if the row "doelgroep" isn't empty
+		sql_query += ("doelgroep = %s AND ") # adds said row to the sql query
+		columns.append(initial_product[doelgroep]) # appends the data inside the row to this a variable
+	if initial_product[category] != None: # filtering process is repeated for all given rows.
 		sql_query += ("category = %s AND ")
 		columns.append(initial_product[category])							
 	if initial_product[sub] != None:
@@ -73,6 +72,10 @@ def recommendation_filter(productid):
 	'''
 	   
 	productID = str(productid)
+
+	categories = []
+	sub_ = []
+	sub_sub_ =  []
 
 	try:
 		sql_query = column_finder(productID)[0]
@@ -227,6 +230,9 @@ def profile_viewed_before(profile_id):
 	cur.execute("SELECT product_id FROM viewed_before WHERE profile_id = %s", (profile_ID,))
 	viewed_products = cur.fetchall()
 	
+	if len(viewed_products) == 0:
+		return()
+
 	viewed_before = []
 	for r in viewed_products:
 		viewed_before.append(r[0])
@@ -237,8 +243,8 @@ def profile_viewed_before(profile_id):
 
 	similar_product_dict = {}
 
-	for profile in similar_profiles[]:
-		cur.execute("SELECT product_id FROM viewed_before WHERE profile_id IN (%s)", profile)
+	for profile in similar_profiles:
+		cur.execute("SELECT product_id FROM viewed_before WHERE profile_id IN %s", (profile,))
 		products = cur.fetchall()
 		for product in products:
 			if product[0] in similar_product_dict and product[0] not in viewed_before:
@@ -251,6 +257,7 @@ def profile_viewed_before(profile_id):
 	similar_product_results = sorted(similar_product_dict.items(), key=lambda x: x[1], reverse=True)[:4]
 
 	similar_products = []
+	similar_products.append(profile_id)
 
 	for product in similar_product_results:
 		similar_products.append(product[0])
@@ -261,25 +268,29 @@ def profile_viewed_before(profile_id):
 
 def collaborative_recommendation_filler():
 	'''
-	
+	This function makes use of previous functions to get collaborative recommendations for every profile 
 	'''
-	sql_insert = "INSERT INTO product_recommendations \
+	insertcount = 0	
+	sql_insert = "INSERT INTO collaborative_recommendations \
 				(profile_id, similar_product_1, similar_product_2, similar_product_3, similar_product_4) \
 				VALUES (%s, %s, %s, %s, %s)"
 	cur.execute("SELECT * FROM profile")
 	profiles = cur.fetchall()
-	insertcount = 0
-	cur.execute("select count(*) from profile")  
-	profile_amount = list(cur)
-	# print(products[40328])
-	try:
-		for profile in profiles:
-			cur.execute(sql_insert,profile_viewed_before(profile[0]))
+
+	# try:
+	for profile in profiles:
+		profile = profile_viewed_before(profile[0])
+		if len(profile) == 0:
+			print('Profile has yet to view a product')
+			continue
+		else:
+			cur.execute(sql_insert, profile)
 			con.commit()
 			insertcount += 1
-			print(f"{insertcount} out of {profile_amount[0][0]}")
-	except Exception as e:
-		print("Error! ",e, profile[0])
+			print(f"Inserted {insertcount} rows")
+	# except Exception as e:
+	# 	except_count += 1
+	# 	print("Error! ",e, profile[0], except_count) # in case of an error, I want the error message and profile id, to make debugging easier.
 
 
 
@@ -291,7 +302,8 @@ def main():
 
 
 
-
+create_sql_tables()
+collaborative_recommendation_filler()
 
 
 
