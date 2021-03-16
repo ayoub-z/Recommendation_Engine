@@ -28,9 +28,8 @@ def column_finder(productid):
 	This function looks up the given product_id in the database to find rows that aren't empty. 
 	Afterwhich it returns a variable and an sql query containing only those rows that are 
 	left over after filtering.
-
 	'''
-	productID = str(productid) # makes sure the product_id is in a string
+	productID = str(productid) # puts product_id in a string
 
 	cur.execute("SELECT * FROM product WHERE _id = %s",(productID,)) # retrieves all data from given product_id
 	initial_product = cur.fetchone() # inputs product_id data in variable
@@ -38,10 +37,10 @@ def column_finder(productid):
 	sql_query = "SELECT * FROM product WHERE " # sql query with a basic frame to look up products, will have more code added to it
 	columns = [] # variable that will contain the data of each row. We will need this later for comparing
 	
-	if initial_product[doelgroep] != None: # checks if the row "doelgroep" isn't empty
-		sql_query += ("doelgroep = %s AND ") # adds said row to the sql query
-		columns.append(initial_product[doelgroep]) # appends the data inside the row to this a variable
-	if initial_product[category] != None: # filtering process is repeated for all given rows.
+	if initial_product[doelgroep] != None: # checks if the column "doelgroep" isn't empty
+		sql_query += ("doelgroep = %s AND ") # adds said column to the sql query
+		columns.append(initial_product[doelgroep]) # appends the data inside the column to this a variable
+	if initial_product[category] != None: # filtering process is repeated for all given columns.
 		sql_query += ("category = %s AND ")
 		columns.append(initial_product[category])							
 	if initial_product[sub] != None:
@@ -71,73 +70,81 @@ def recommendation_filter(productid):
 	Importance is decided by the amount of products each filter has.
 	'''
 	   
-	productID = str(productid)
+	productID = str(productid) # puts product_id in a string
 
-	categories = []
+	categories = [] 
 	sub_ = []
 	sub_sub_ =  []
 
 	try:
-		sql_query = column_finder(productID)[0]
-		columns = column_finder(productID)[1]
-	except TypeError:
+		sql_query = column_finder(productID)[0] # variable containing retrieved sql query for given product_id
+		columns = column_finder(productID)[1] # variable containing retrieved sql data for columns inside given product_id
+	except TypeError: # error message in case product isn't in database. Should only be ~3000 products with corrupt data
 		print("Dit product zit niet in de database.")
 		quit()
 
-	cur.execute("SELECT * FROM product WHERE _id = %s",[productID])
-	initial_product = cur.fetchone()
+	cur.execute("SELECT * FROM product WHERE _id = %s",[productID]) # retrieves all data for given product_id
+	initial_product = cur.fetchone() # inputs product_id data in variable
 
-	cur.execute("SELECT * FROM PRODUCT")
-	products = cur.fetchall()
+	cur.execute("SELECT * FROM product") # retrieves all data from table "product"
+	products = cur.fetchall() # inputs data of all products in variable
 
+	# generates a list containing all individual categories in table "product"
 	for product in products:
 		if product[category] not in categories:
 			categories.append(product[category])
 
+	# generates a list containing all individual sub_categories in table "product"
 	for product in products:
 		if product[sub] not in sub_:
 			sub_.append(product[sub])
 
+	# generates a list containing all individual sub_sub_categories in table "product"
 	for product in products:
 		if product[sub_sub] not in sub_sub_:
 			sub_sub_.append(product[sub_sub])		
 
-	duplicates_1 = [a for a in categories if a in sub_]
-	duplicates_2 = [a for a in sub_ if a in sub_sub_]
+	# generates a list containing duplicate category names in the column "sub_category"
+	category_duplicates = [a for a in categories if a in sub_]
 
-	# loop until there are at least 4 similar products are found
-	while True:
+	# generates a list containing duplicate sub_category names in the column "sub_sub_category	""
+	sub_category_duplicates = [a for a in sub_ if a in sub_sub_]
+
+	while True: # loops until at least 4 similar products are found
 		count = 0 # keeps track of amount of similar products
-		raw_sql_query = "SELECT * FROM product WHERE "
+		raw_sql_query = "SELECT * FROM product WHERE " 
 
-		cur.execute(sql_query, columns)
-		filtered_products = cur.fetchall()
+		cur.execute(sql_query, columns) # sql query to retrieve all leftover products after they've been filtered
+		filtered_products = cur.fetchall() # inputs data of retrieved products in variable
 
-		print(columns)
-
-		for product in filtered_products:
+		for product in filtered_products: # counts the amount of retrieved products
 			count += 1 
-		if count >= 4: # checks if there are already 4 or more products available
-			return (filtered_products)
+		if count >= 4: 
+			return (filtered_products) # returns list of retrieved products if it contains at least 4 products
 
 		if count < 4:
-			columns = columns[:-1]
-			if initial_product[doelgroep] in columns:
-				raw_sql_query += "doelgroep = %s AND "			
-			if initial_product[category] in columns:
+			columns = columns[:-1] # if less than 4 products are found, remove 1 column from list containing column names
+
+			# the following code is to check which columns are left over, after the last column is removed
+			# after which a new sql query is generated containing the left over columns
+			if initial_product[doelgroep] in columns: # checks if the column "doelgroep" is inside the list of leftover columns
+				raw_sql_query += "doelgroep = %s AND "# adds said column to the sql query		
+			if initial_product[category] in columns: # repeats for each column
 				raw_sql_query += "category = %s AND "			
 			if initial_product[sub] in columns:
-				if initial_product[sub] in duplicates_1 and initial_product[sub] == initial_product[category]:
-					if columns.count(initial_product[sub]) == 1:
-						pass #	
-					else:
+				# check for duplicate named columns between category and sub_category. 
+				if initial_product[sub] in category_duplicates and initial_product[sub] == initial_product[category]:
+					if columns.count(initial_product[sub]) == 1: # checks if there is only one column with this column name
+						pass # in which case it skips
+					else: # if both columns have the same name and there exist 2 columns with that name, only then does it add said column to the sql query	
 						raw_sql_query += "sub_category = %s AND "
 				else:
 					raw_sql_query += "sub_category = %s AND "
 			if initial_product[sub_sub] in columns:
-				if initial_product[sub_sub] in duplicates_2 and initial_product[sub_sub] == initial_product[sub]:
-					if columns.count(initial_product[sub_sub]) == 1:
-						pass # 	
+				# check for duplicate named columns in sub_category and sub_sub_category
+				if initial_product[sub_sub] in sub_category_duplicates and initial_product[sub_sub] == initial_product[sub]:
+					if columns.count(initial_product[sub_sub]) == 1: # same as earlier, check if there's only one column with this column name
+						pass # skip if so
 					else:
 						raw_sql_query += "sub_sub_category = %s AND "
 				else: 
@@ -146,14 +153,15 @@ def recommendation_filter(productid):
 				raw_sql_query += "brand = %s AND "					
 
 		raw_sql_query = raw_sql_query[:-4] # removes the extra "AND " at the end of the sql query
-		sql_query = raw_sql_query
-		cur.execute(sql_query, columns)
-		filtered_products = cur.fetchall()
+		sql_query = raw_sql_query # old sql query is replaced with new sql query
+
+		cur.execute(sql_query, columns) # sql query to retrieve new set of leftover products after they've been filtered
+		filtered_products = cur.fetchall() # inputs data of retrieved products in variable
 		
-		for product in filtered_products:
+		for product in filtered_products: # counts the amount of retrieved products
 			count += 1
 		if count >= 4:
-			return(filtered_products)
+			return(filtered_products) # returns list of retrieved products if it contains at least 4 products
 
 
 
@@ -161,8 +169,8 @@ def recommended_products(productid):
 	'''
 	
 	'''	
-	filtered_products = recommendation_filter(productid)
-	random_products = [productid]# contains current product. 4 similar products will be appended
+	filtered_products = recommendation_filter(productid) # retrieves list of filtered products
+	random_products = [productid]# list that will contain the initial_product and 4 other products for recommendation
 	
 	for i in range (0,4): # repeats 4 times
 		random_choice = random.choice(filtered_products) # picks 4 random products from pre-filtered list
@@ -225,7 +233,7 @@ def profile_viewed_before(profile_id):
 	'''
 
 	'''
-	profile_ID = str(profile_id)
+	profile_ID = str(profile_id) # puts product_id in a string
 		
 	cur.execute("SELECT product_id FROM viewed_before WHERE profile_id = %s", (profile_ID,))
 	viewed_products = cur.fetchall()
