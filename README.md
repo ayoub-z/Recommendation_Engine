@@ -8,4 +8,4 @@ The manner in which the filtering is done is as follows. For product A, look up 
 
 
 - Content_filtering takes around ~5-10 minutes to generate and insert the data for all products.
-- Collaborative_filtering takes around ~3 minutes generate and insert the data per individual profile.
+- Collaborative_filtering takes around ~3 minutes to generate and insert the data per individual profile.
