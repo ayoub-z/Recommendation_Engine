@@ -1,6 +1,6 @@
 # Recommendation Engine
 
-There are 2 recommendation engines:
+In this file there are 2 recommendation types with the following idea:
 1. Content based filtering: for each product in the database, retrieve other products with similar categories/brands and target audience, using a filtering system.  
 The manner in which the filtering is done is as follows. For product A, look up products that have exactly the same categories/brands/target audience. If the result is less than 4 products, one of the filters is removed. This repeats until there are at least 4 products.
 
