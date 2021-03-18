@@ -247,41 +247,51 @@ def profile_viewed_before(profile_id):
 	Bron: Idea is partially by me, but mostly by: Levi Verhoef'''
 
 	profile_ID = str(profile_id) # puts product_id in a string
+	viewed_before = [] # list that will contain all previously viewed products
 		
-	cur.execute("SELECT product_id FROM viewed_before WHERE profile_id = %s", (profile_ID,))
-	viewed_products = cur.fetchall()
+	# retrieves data containing all viewed products by the current profile_id
+	cur.execute("SELECT product_id FROM viewed_before WHERE profile_id = %s", (profile_ID,)) 
+	viewed_products = cur.fetchall() # inputs data of all products in variable
 	
-	if len(viewed_products) == 0:
+	if len(viewed_products) == 0: # skips profiles that have not viewed any products
 		return()
 
-	viewed_before = []
-	for r in viewed_products:
-		viewed_before.append(r[0])
-	viewed_before = tuple(viewed_before)
+	# extracts the product from one list, to add them to another
+	for product in viewed_products:
+		viewed_before.append(product[0]) # this is done to properly place them in the list
+	viewed_before = tuple(viewed_before) 
 
+	# retrieves data containing all the profiles that have viewed the same products as the current profile_id
 	cur.execute("SELECT profile_id FROM viewed_before WHERE product_id IN %s", (viewed_before,))
-	similar_profiles = cur.fetchall()
+	similar_profiles = cur.fetchall() # inputs all data in variable
+	
+	# dictionary that keeps track of ALL the products that have been viewed by all profiles in "similar_profiles"
+	similar_product_dict = {} 
 
-	similar_product_dict = {}
-
-	for profile in similar_profiles:
+	for profile in similar_profiles: # loops for all profiles in variable "similar_profiles"
+		
+		# retrieves data containing that has been viewed by profile
 		cur.execute("SELECT product_id FROM viewed_before WHERE profile_id IN %s", (profile,))
-		products = cur.fetchall()
+		products = cur.fetchall() # inputs data in variable
+
 		for product in products:
-			if product[0] in similar_product_dict and product[0] not in viewed_before:
-				similar_product_dict[product[0]] += 1
-			elif product[0] not in similar_product_dict and product[0] not in viewed_before:
-				similar_product_dict[product[0]] = 1
+			# checks if product is in dictionary and that it isn't already viewed by the profile
+			if product[0] in similar_product_dict and product[0] not in viewed_products:
+				similar_product_dict[product[0]] += 1 # adds 1 to the amount of this product in the dictionary
+			# checks if product isn't in dictionary and that isn't already viewed by the profile
+			elif product[0] not in similar_product_dict and product[0] not in viewed_products:
+				similar_product_dict[product[0]] = 1 # inserts product into dictionary 
 			else:
-				continue
+				continue # this is to skip products already viewed by profile. We don't want to recommend products they've already seen
+
 	# sorts dictionary from highest to lowest and returns the top 4 products
 	similar_product_results = sorted(similar_product_dict.items(), key=lambda x: x[1], reverse=True)[:4]
 
 	similar_products = []
-	similar_products.append(profile_id)
+	similar_products.append(profile_id) # adds profile_id first, before adding the recommended products
 
 	for product in similar_product_results:
-		similar_products.append(product[0])
+		similar_products.append(product[0]) # adds the 4 recommended products into variable
 
 	return(similar_products)
 
@@ -297,22 +307,24 @@ def collaborative_recommendation_filler():
 	sql_insert = "INSERT INTO collaborative_recommendations \
 				(profile_id, similar_product_1, similar_product_2, similar_product_3, similar_product_4) \
 				VALUES (%s, %s, %s, %s, %s)"
-	cur.execute("SELECT * FROM profile")
-	profiles = cur.fetchall()
+
+	cur.execute("SELECT * FROM profile") # retrieve all data from table profile
+	profiles = cur.fetchall() # inputs data of profile into variable
 
 	try:
 		for profile in profiles:
-			profile = profile_viewed_before(profile[0])
-			if len(profile) == 0:
+			similar_products = profile_viewed_before(profile[0]) # products similar to  viewed products by profile 
+			if len(profile) == 0: # skip products that have not viewed any products
 				print('Profile has yet to view a product')
 				continue
 			else:
-				cur.execute(sql_insert, profile)
+				cur.execute(sql_insert, similar_products) # insert the similar products into database
 				con.commit()
 				insertcount += 1
 				print(f"Inserted {insertcount} rows")
 	except Exception as e:
 		print("Error! ",e, profile[0]) # in case of an error, I want the error message and profile id, to make debugging easier.
+		continue
 
 
 
