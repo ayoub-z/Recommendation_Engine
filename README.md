@@ -10,4 +10,8 @@ The manner in which the filtering is done is as follows. For product A, look up 
 - Content_filtering takes around ~5-10 minutes to generate and insert the data for all products.
 - Collaborative_filtering takes around ~3 minutes to generate and insert the data per individual profile.
 
-If needed, assignment 2 (creating database): https://github.com/ayoub-z/HU_WebShop
+If needed, files containing assignment 2 (creating database): https://github.com/ayoub-z/HU_WebShop
+
+Screenshot query tables: https://imgur.com/a/cDEBji5
+- The recommendations from content_filtering have all been put in the database
+- Sinds collaborative_filtering takes ~3 minutes per profile, only 15 profiles have been inserted in the database as an example.
