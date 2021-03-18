@@ -25,9 +25,9 @@ sub_sub_sub = 11
 
 def column_finder(productid):
 	'''
-	This function looks up the given product_id in the database to find rows that aren't empty. 
-	Afterwhich it returns a variable and an sql query containing only those rows that are 
-	left over after filtering.
+	This function looks up the product_id in the database and searches for non-empty columns in the table product. 
+	Afterwhich it returns a variable containing the data of the product and an sql search query containing
+	only those non-empty columns.
 	'''
 	productID = str(productid) # puts product_id in a string
 
@@ -167,7 +167,8 @@ def recommendation_filter(productid):
 
 def recommended_products(productid):
 	'''
-	
+	This function generates a list containing 4 random products from a different list containing
+	products that have been filtered on similarity.
 	'''	
 	filtered_products = recommendation_filter(productid) # retrieves list of filtered products
 	random_products = [productid]# list that will contain the initial_product and 4 other products for recommendation
@@ -181,7 +182,7 @@ def recommended_products(productid):
 
 def create_sql_tables():
 	'''
-	
+	Function that creates two sql tables in the database if they don't already exist.
 	'''
 	# creates table for content_filtering in the database if it doesn't already exist
 	sql_content_table = "CREATE TABLE IF NOT EXISTS content_recommendations \
@@ -208,22 +209,30 @@ def create_sql_tables():
 
 def content_recommendation_filler():
 	'''
-	
+	This function makes use of the function "recommended_products" to receive a content based 
+	recommendation containing 4 recommended products for every product in the database. 
+	It then inserts these results into the table "content_recommendations"
 	'''
 	sql_insert = "INSERT INTO content_recommendations \
 				(main_product, similar_product_1, similar_product_2, similar_product_3, similar_product_4) \
 				VALUES (%s, %s, %s, %s, %s)"
-	cur.execute("SELECT * FROM product")
-	products = cur.fetchall()
-	insertcount = 0
-	cur.execute("select count(*) from product")  
-	product_amount = list(cur)
-	try:
+
+	cur.execute("SELECT * FROM product") # retrieves all data from table "product"
+	products = cur.fetchall() # inputs data of all products in variable
+
+	insertcount = 0 # counter to keep track of each inserted row into the database
+
+	cur.execute("select count(*) from product") # retrieves the amount of rows in table product
+	product_amount = list(cur) # variable containing the number of rows for table products
+
+	try: # repeats for every product in the database
 		for product in products:
-			cur.execute(sql_insert,recommended_products(product[0]))
+			# makes use of the function  recommended_products" to receive 4 similar products
+			#  and inserts said products into the database
+			cur.execute(sql_insert,recommended_products(product[0])) 
 			con.commit()
 			insertcount += 1
-			print(f"{insertcount} out of {product_amount[0][0]}")
+			print(f"{insertcount} out of {product_amount[0][0]}") # prints current progress for a visual
 	except Exception as e:
 		print("Error! ",e, product[0])
 
@@ -231,8 +240,12 @@ def content_recommendation_filler():
 
 def profile_viewed_before(profile_id):
 	'''
+	Generates a list containing 4 products similar to the products the profile has viewed before.
+	This is done by looking up profiles that have viewed the same products as the current profile_id
+	and keeping count of the other products they have viewed. The 4 products that have the most 
+	combined views are put in a list and returned for recommending.
+	Bron: Idea is partially by me, but mostly by: Levi Verhoef'''
 
-	'''
 	profile_ID = str(profile_id) # puts product_id in a string
 		
 	cur.execute("SELECT product_id FROM viewed_before WHERE profile_id = %s", (profile_ID,))
@@ -276,7 +289,9 @@ def profile_viewed_before(profile_id):
 
 def collaborative_recommendation_filler():
 	'''
-	This function makes use of previous functions to get collaborative recommendations for every profile 
+	This function makes use of the function "profile_viewed_before" to receive a collaborative based 
+	recommendation containing 4 recommended products for each and every profile in the database. 
+	It then inserts these results into the table "collaborative_recommendations"
 	'''
 	insertcount = 0	
 	sql_insert = "INSERT INTO collaborative_recommendations \
@@ -285,33 +300,29 @@ def collaborative_recommendation_filler():
 	cur.execute("SELECT * FROM profile")
 	profiles = cur.fetchall()
 
-	# try:
-	for profile in profiles:
-		profile = profile_viewed_before(profile[0])
-		if len(profile) == 0:
-			print('Profile has yet to view a product')
-			continue
-		else:
-			cur.execute(sql_insert, profile)
-			con.commit()
-			insertcount += 1
-			print(f"Inserted {insertcount} rows")
-	# except Exception as e:
-	# 	except_count += 1
-	# 	print("Error! ",e, profile[0], except_count) # in case of an error, I want the error message and profile id, to make debugging easier.
+	try:
+		for profile in profiles:
+			profile = profile_viewed_before(profile[0])
+			if len(profile) == 0:
+				print('Profile has yet to view a product')
+				continue
+			else:
+				cur.execute(sql_insert, profile)
+				con.commit()
+				insertcount += 1
+				print(f"Inserted {insertcount} rows")
+	except Exception as e:
+		print("Error! ",e, profile[0]) # in case of an error, I want the error message and profile id, to make debugging easier.
 
 
 
 def main():
+	'''
+	Calls forth the needed functions to create the necessary sql tables and generate the recommendations.
+	'''
 	create_sql_tables()
 	content_recommendation_filler()	
 	collaborative_recommendation_filler()	
-
-
-
-
-create_sql_tables()
-collaborative_recommendation_filler()
 
 
 
