@@ -311,8 +311,8 @@ def collaborative_recommendation_filler():
 	cur.execute("SELECT * FROM profile") # retrieve all data from table profile
 	profiles = cur.fetchall() # inputs data of profile into variable
 
-	try:
-		for profile in profiles:
+	for profile in profiles:
+		try:
 			similar_products = profile_viewed_before(profile[0]) # products similar to  viewed products by profile 
 			if len(profile) == 0: # skip products that have not viewed any products
 				print('Profile has yet to view a product')
@@ -322,10 +322,9 @@ def collaborative_recommendation_filler():
 				con.commit()
 				insertcount += 1
 				print(f"Inserted {insertcount} rows")
-	except Exception as e:
-		print("Error! ",e, profile[0]) # in case of an error, I want the error message and profile id, to make debugging easier.
-		continue
-
+		except Exception as e:
+			print("Error! ",e, profile[0]) # in case of an error, I want the error message and profile id, to make debugging easier.
+			continue
 
 
 def main():
@@ -337,4 +336,5 @@ def main():
 	collaborative_recommendation_filler()	
 
 
-
+cur.close()
+con.close()
